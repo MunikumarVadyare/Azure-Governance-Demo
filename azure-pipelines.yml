@@ -35,7 +35,7 @@ stages:
   - deployment: DeployWeb
     displayName: 'Deploy Web App'
     environment:
-      name: 'http://20.210.89.138/'  # <--- MUST match your Environment name
+      name: 'muni-linux-vm'  # <--- MUST match your Environment name
       resourceType: VirtualMachine
     strategy:
       runOnce:
