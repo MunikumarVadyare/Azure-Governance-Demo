@@ -1,0 +1,52 @@
+trigger:
+- main
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+stages:
+# STAGE 1: CI (Build the Code)
+- stage: Build
+  displayName: 'Build Stage'
+  jobs:
+  - job: Build
+    steps:
+    # 1. Package the file
+    - task: ArchiveFiles@2
+      inputs:
+        rootFolderOrFile: '$(System.DefaultWorkingDirectory)'
+        includeRootFolder: false
+        archiveType: 'zip'
+        archiveFile: '$(Build.ArtifactStagingDirectory)/website.zip'
+        replaceExistingArchive: true
+
+    # 2. Upload the artifact (The "Box") to Azure DevOps
+    - task: PublishBuildArtifacts@1
+      inputs:
+        PathtoPublish: '$(Build.ArtifactStagingDirectory)'
+        ArtifactName: 'drop'
+        publishLocation: 'Container'
+
+# STAGE 2: CD (Deploy to your Linux Machine)
+- stage: Deploy
+  displayName: 'Deploy Stage'
+  dependsOn: Build
+  jobs:
+  - deployment: DeployWeb
+    displayName: 'Deploy Web App'
+    environment:
+      name: 'http://20.210.89.138/'  # <--- MUST match your Environment name
+      resourceType: VirtualMachine
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+            # 3. Download the "Box" (Artifact) is automatic in Deployment jobs
+            
+            # 4. Unzip and overwrite the Nginx default page
+            - script: |
+                echo "Deploying to Nginx..."
+                sudo unzip -o $(Pipeline.Workspace)/drop/website.zip -d /var/www/html/
+                # Restart Nginx to be safe (optional for static files, but good practice)
+                sudo systemctl reload nginx
+              displayName: 'Update Website Code'
